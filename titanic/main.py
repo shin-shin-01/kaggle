@@ -1,6 +1,5 @@
 import pandas as pd
 from sklearn.svm import SVC
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GridSearchCV
 
@@ -21,6 +20,11 @@ def preprocess(df):
     # df2['Sex'].unique() => male , female
     df['Sex'] = df['Sex'].apply(lambda sex: 1 if sex=="male" else 0)
 
+    # タイタニック号に乗っている家族の数
+    df["Families"] = df["SibSp"] + df["Parch"]
+    # - 独身, １世帯, それ以上 に分けてみる
+    df["Families"] = df["Families"].apply(lambda x: "s" if x == 0 else "m" if x < 3 else "l")
+
     # One-Hot-Encoding: Embarked
     df = pd.get_dummies(df)
 
@@ -31,23 +35,16 @@ def preprocess(df):
 
 
 def run_ml(X, y):
-    """学習・テストデータでのスコア出力"""
-    # 学習用データと検証用データに分割
-    X_train, X_test, y_train, y_test = train_test_split(X.values, y.values, test_size=0.3, random_state=None)
-
     # 標準化
     std_scl = StandardScaler()
-    std_scl.fit(X_train)
-    X_train = std_scl.transform(X_train)
-    X_test = std_scl.transform(X_test)
+    std_scl.fit(X)
+    X = std_scl.transform(X)
 
-    # 学習・テスト
+    # 学習（全データを用いて学習）
     # - GridSearchで良いパタメータを探す & 交差検証
     param_grid = {'C': [0.001, 0.01, 0.1, 1, 10, 100],  'gamma' : [0.001, 0.01, 0.1, 1, 10, 100]}
     model = GridSearchCV(SVC(kernel='linear'), param_grid, cv=5)
-    model.fit(X_train, y_train)
-    score = model.score(X_test,y_test)
-    print(score)
+    model.fit(X, y)
 
     return model
 
@@ -57,7 +54,7 @@ if __name__ == "__main__":
     df = pd.read_csv("./data/input/train.csv", index_col=0)
     df = preprocess(df)
     # - トレーニングデータを説明変数(X)と目的変数(y)に分割
-    cols = ["Pclass", "Sex", "Fare", "Embarked_C", "Embarked_S"]
+    cols = ["Pclass", "Sex", "Fare", "Embarked_C", "Embarked_S", "Families_m", "Families_s"]
     model = run_ml(df[cols], df["Survived"])
 
     # test.csv で最終結果出力
