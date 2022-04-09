@@ -2,6 +2,7 @@ import pandas as pd
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import GridSearchCV
 
 
 def preprocess(df):
@@ -45,19 +46,21 @@ def run_ml(df):
     X_test = std_scl.transform(X_test)
 
     # 学習・テスト
-    svm = SVC(kernel='linear', random_state=None, C=0.1)
-    svm.fit(X_train, y_train)
-    score = svm.score(X_test,y_test)
+    # - GridSearchで良いパタメータを探す & 交差検証
+    param_grid = {'C': [0.001, 0.01, 0.1, 1, 10, 100],  'gamma' : [0.001, 0.01, 0.1, 1, 10, 100]}
+    model = GridSearchCV(SVC(kernel='linear'), param_grid, cv=5)
+    model.fit(X_train, y_train)
+    score = model.score(X_test,y_test)
     print(score)
 
-    return svm
+    return model
 
 
 if __name__ == "__main__":
     # train.csv で学習
     df = pd.read_csv("./data/input/train.csv", index_col=0)
     df = preprocess(df)
-    svm = run_ml(df)
+    model = run_ml(df)
 
     # test.csv で最終結果出力
     df_test = pd.read_csv("./data/input/test.csv", index_col=0)
@@ -66,7 +69,7 @@ if __name__ == "__main__":
     # - データの整形
     df_submit = pd.DataFrame({
         'PassengerId': list(df_test.index),
-        'Survived': svm.predict(df_test)
+        'Survived': model.predict(df_test)
     })
     # - CSV出力
     df_submit.to_csv("./data/output/gender_submission.csv", index=False)
