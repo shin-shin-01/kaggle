@@ -30,12 +30,8 @@ def preprocess(df):
     return df
 
 
-def run_ml(df):
+def run_ml(X, y):
     """学習・テストデータでのスコア出力"""
-    # トレーニングデータを説明変数(X)と目的変数(y)に分割
-    X = df.drop(columns="Survived")
-    y = df["Survived"]
-
     # 学習用データと検証用データに分割
     X_train, X_test, y_train, y_test = train_test_split(X.values, y.values, test_size=0.3, random_state=None)
 
@@ -60,7 +56,9 @@ if __name__ == "__main__":
     # train.csv で学習
     df = pd.read_csv("./data/input/train.csv", index_col=0)
     df = preprocess(df)
-    model = run_ml(df)
+    # - トレーニングデータを説明変数(X)と目的変数(y)に分割
+    cols = ["Pclass", "Sex", "Fare", "Embarked_C", "Embarked_S"]
+    model = run_ml(df[cols], df["Survived"])
 
     # test.csv で最終結果出力
     df_test = pd.read_csv("./data/input/test.csv", index_col=0)
@@ -69,7 +67,7 @@ if __name__ == "__main__":
     # - データの整形
     df_submit = pd.DataFrame({
         'PassengerId': list(df_test.index),
-        'Survived': model.predict(df_test)
+        'Survived': model.predict(df_test[cols])
     })
     # - CSV出力
     df_submit.to_csv("./data/output/gender_submission.csv", index=False)
